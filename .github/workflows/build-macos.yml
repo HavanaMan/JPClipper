@@ -1,0 +1,44 @@
+name: Build macOS Plugin
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: cmake -S . -B build-mac -G Xcode -DJUCE_PATH="$GITHUB_WORKSPACE/JUCE" -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build Release
+        run: cmake --build build-mac --config Release
+
+      - name: List artefacts
+        run: find build-mac -name "*.vst3" -o -name "*.component"
+
+      - name: Package AU and VST3
+        run: |
+          mkdir -p packaged/inner
+
+          ditto -c -k --keepParent \
+            build-mac/JPClipper_artefacts/Release/AU/JPClipper.component \
+            packaged/inner/JPClipper-AU.zip
+
+          ditto -c -k --keepParent \
+            build-mac/JPClipper_artefacts/Release/VST3/JPClipper.vst3 \
+            packaged/inner/JPClipper-VST3.zip
+
+          cd packaged/inner
+          zip -r ../JPClipper.zip JPClipper-AU.zip JPClipper-VST3.zip
+
+      - name: Upload JPClipper package
+        uses: actions/upload-artifact@v4
+        with:
+          name: JPClipper
+          path: packaged/JPClipper.zip

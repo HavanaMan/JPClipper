@@ -1,0 +1,71 @@
+name: Build Linux Plugin
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            ninja-build \
+            libgtk-3-dev \
+            libcurl4-openssl-dev \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            ladspa-sdk \
+            libfreetype6-dev \
+            libx11-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxcomposite-dev \
+            libxdamage-dev \
+            libxfixes-dev \
+            libxrender-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev
+
+          sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
+
+      - name: Check Linux GUI dependencies
+        run: |
+          pkg-config --modversion gtk+-3.0
+          pkg-config --cflags gtk+-3.0
+
+      - name: Configure CMake
+        run: cmake -S . -B build-linux -G Ninja -DJUCE_PATH="$GITHUB_WORKSPACE/JUCE" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build Release
+        run: cmake --build build-linux
+
+      - name: List artefacts
+        run: find build-linux -name "*.vst3"
+
+      - name: Package Linux VST3
+        run: |
+          mkdir -p packaged/inner
+
+          cd build-linux/JPClipper_artefacts/Release/VST3
+          zip -r "$GITHUB_WORKSPACE/packaged/inner/JPClipper-Linux-VST3.zip" JPClipper.vst3
+
+          cd "$GITHUB_WORKSPACE/packaged/inner"
+          zip -r ../JPClipper-Linux.zip JPClipper-Linux-VST3.zip
+
+      - name: Upload Linux VST3 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: JPClipper-Linux
+          path: packaged/JPClipper-Linux.zip

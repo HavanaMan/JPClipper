@@ -1,0 +1,10 @@
+build*/
+Builds/VisualStudio2022/x64/
+.vs/
+*.user
+*.suo
+*.VC.db
+*.opendb
+CMakeCache.txt
+CMakeFiles/
+sync-project-with-github.ps1
